@@ -1,8 +1,6 @@
 import hashlib
 import sqlite3
-
 DB_FILE = "driveshare.db"
-
 
 class DatabaseManager:
     #Manages SQLite database connections and table definitions
