@@ -1,0 +1,4 @@
+How to run application:
+Navigate to folder cis476driveshare
+python app.py
+(To simulate two different users logged in at the same time, must open two terminals and each user login from their own terminal)
