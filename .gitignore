@@ -1,0 +1,9 @@
+# Compiled Python files
+__pycache__/
+*.py[cod]
+
+# SQLite database files
+driveshare.db
+*.db
+*.sqlite
+*.sqlite3

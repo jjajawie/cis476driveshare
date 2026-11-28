@@ -98,8 +98,6 @@ class Listing:
         self.daily_price = 0.0
         self.avail_start = ""
         self.avail_end = ""
-        self.car_type = "Sedan"
-        self.features = ""
         self.is_available = 1
 
 
@@ -110,16 +108,6 @@ class ListingBuilder:
 
     def set_owner(self, owner_id: int):
         self.car.owner_id = owner_id
-        return self
-
-    def set_car_type(self, car_type: str):
-        if car_type and car_type.strip():
-            self.car.car_type = car_type.strip()
-        return self
-
-    def set_features(self, features: str):
-        if features and features.strip():
-            self.car.features = features.strip()
         return self
 
     def set_vehicle_info(self, model: str, year: int, mileage: int):
@@ -139,6 +127,8 @@ class ListingBuilder:
         #Validates required fields and date ranges before returning Listing.
         if not self.car.model or not self.car.pickup_location:
             raise ValueError("Model and Pickup Location are required.")
+        if self.car.mileage < 0:
+            raise ValueError("Mileage cannot be negative.")
         if self.car.daily_price <= 0:
             raise ValueError("Daily price must be greater than $0.")
         
@@ -163,7 +153,7 @@ class Observer(ABC):
 class RenterObserver(Observer):
     #Notifies a watching renter when price drops or its available.
 
-    def __init__(self, db: DatabaseManager, renter_id: int, notify_avail: bool, max_price: float):
+    def __init__(self, db: DatabaseManager, renter_id: int, max_price: float, notify_avail: bool):
         self.db = db
         self.renter_id = renter_id
         self.max_price = max_price
@@ -250,8 +240,6 @@ class RealPaymentGateway(PaymentGateway):
         booking = current.fetchone()
         if not booking:
             return False, "Booking not found"
-        if booking["is_paid"]:
-            return False, "Booking has already been paid"
 
         #In the event the payee has insufficient funds
         current.execute("SELECT balance FROM users WHERE user_id = ?", (renter_id,))
@@ -264,7 +252,6 @@ class RealPaymentGateway(PaymentGateway):
             "UPDATE users SET balance = balance + ? WHERE user_id = ?",
             (amount, booking["owner_id"]),
         )
-        current.execute("UPDATE bookings SET is_paid = 1 WHERE booking_id = ?", (booking_id,))
 
         #to confirm payments on date and time
         now = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -314,14 +301,14 @@ class UIMediator:
         self.components[name] = component
 
     def notify(self, sender: str, event: str, payload=None):
-            app = self.components.get("app")
-            dashboard = self.components.get("dashboard")
-            #Events for when the application is moving from state to state
-            if event == "LOGIN_SUCCESS" and app:
-                app.show_main_dashboard()
-            elif event == "LOGOUT" and app:
-                app.show_auth_screen()
-            elif event in ("CAR_UPDATED", "BOOKING_CREATED", "PAYMENT_COMPLETED", "MESSAGE_SENT") and dashboard:
-                dashboard.refresh_all_tabs()
-            elif event == "OPEN_CHAT_WITH_OWNER" and dashboard:
-                dashboard.jump_to_messages(payload)
+        app = self.components.get("app")
+        dashboard = self.components.get("dashboard")
+        #Events for when the application is moving from state to state
+        if event == "LOGIN_SUCCESS" and app:
+            app.show_main_dashboard()
+        elif event == "LOGOUT" and app:
+            app.show_auth_screen()
+        elif event in ("CAR_UPDATED", "BOOKING_CREATED", "PAYMENT_COMPLETED", "MESSAGE_SENT") and dashboard:
+            dashboard.refresh_all_tabs()
+        elif event == "OPEN_CHAT_WITH_OWNER" and dashboard:
+            dashboard.jump_to_messages(payload)
